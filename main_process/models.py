@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.postgres.indexes import GinIndex
 from uuid import uuid4
 
 
@@ -24,6 +25,7 @@ class Project(models.Model):
     """
     class Meta:
         db_table = "project"
+
     project_id = models.UUIDField(
         primary_key=True, default=uuid4, editable=False)
     creation_date = models.DateTimeField(
@@ -32,13 +34,37 @@ class Project(models.Model):
         max_length=256, blank=False, help_text="Project Name")
     # parameters and their units
     metadata = models.JSONField(help_text="Set of Parameters and their units")
+    assets = models.JSONField(help_text="Set of asset names", default=dict)
     deleted = models.BooleanField(default=False, blank=False)
     # add user foreign key later here
 
+    def __str__(self) -> str:
+        return self.project_name
+
 
 class GeneratedModel(models.Model):
+    class Meta:
+        db_table = "generated_model"
+        indexes = [GinIndex(fields=['parameters'])]
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     parameters = models.JSONField(
-        help_text="Set of Parameters and their Values")
-    assets = models.JSONField(help_text="Set of Asset Types and their URLs")
+        help_text="Set of Parameters and their Values", unique=True)
     project_key = models.ForeignKey(
-        "project", on_delete=models.PROTECT, help_text="Foreign Key to Associated Model")
+        Project, on_delete=models.PROTECT, help_text="Foreign Key to Associated Project", blank=False)
+
+    def __str__(self) -> str:
+        return str(self.parameters) + ' -> ' + str(self.project_key)
+
+
+class AssetFile(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    file = models.FileField(
+        help_text="File associated with a generated model", blank=False, editable=False, upload_to="./assets")
+    tag = models.CharField(
+        max_length=30, help_text="File tag of the asset", blank=False, editable=False)
+    generated_model = models.ForeignKey(
+        GeneratedModel, on_delete=models.PROTECT, help_text="Foreign Key to Associated Generated Model", blank=False, related_name="files")
+
+    def __str__(self) -> str:
+        return self.tag + ' -> ' + str(self.generated_model)
