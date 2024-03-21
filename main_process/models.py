@@ -34,7 +34,8 @@ class Project(models.Model):
         max_length=256, blank=False, help_text="Project Name")
     # parameters and their units
     metadata = models.JSONField(help_text="Set of Parameters and their units")
-    assets = models.JSONField(help_text="Set of asset names", default=dict)
+    assets = models.JSONField(
+        help_text="Set of asset names", blank=False)
     deleted = models.BooleanField(default=False, blank=False)
     # add user foreign key later here
 
