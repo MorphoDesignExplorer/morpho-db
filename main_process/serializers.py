@@ -1,4 +1,5 @@
 from main_process.models import Project, GeneratedModel, AssetFile
+from morpho_typing import ArcSchema
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from enum import Enum
@@ -15,78 +16,13 @@ class ProjectSerializer(serializers.ModelSerializer):
         model = Project
         fields = "__all__"
 
-    class DefinedTypes(Enum):
-        INT = "INT"
-        DOUBLE = "DOUBLE"
-        STRING = "STRING"
-
-        @classmethod
-        def from_str(cls, string):
-            if string == "INT":
-                return cls.INT
-            elif string == "DOUBLE":
-                return cls.DOUBLE
-            elif string == "STRING":
-                return cls.STRING
-            raise TypeError("Appropriate mapping not found.")
-
-    __PRIORITY_MAPPING = {
-        DefinedTypes.DOUBLE: 2,
-        DefinedTypes.INT: 1
-    }
-
-    """
-    Compares the size compatibility of `a` against `b`.
-    
-    RETURN VALUES:
-    1: if a is larger than b
-    -1: if a is smaller than b
-    0: if a is equal to b
-
-    EXCEPTIONS:
-    TypeError: if a is incompatible with b
-    """
-
-    def size_ordering(self, a, b):
-        if a == b:
-            return 0
-        if a == self.DefinedTypes.STRING or b == self.DefinedTypes.STRING:
-            raise TypeError(
-                "type STRING cannot be compared with other types.")
-
-        if self.__PRIORITY_MAPPING[a] > self.__PRIORITY_MAPPING[b]:
-            return 1
-        elif self.__PRIORITY_MAPPING[a] < self.__PRIORITY_MAPPING[b]:
-            return -1
-        else:
-            return 0
-
-    @classmethod
-    def type_match(cls, item: int | float | str, defined_type):
-        numeric_types = {cls.DefinedTypes.DOUBLE.value,
-                         cls.DefinedTypes.INT.value}
-        if isinstance(item, int) or isinstance(item, float):
-            if defined_type == cls.DefinedTypes.STRING:
-                return False
-        else:
-            if defined_type in numeric_types:
-                return False
-        return True
-
     def validate(self, attrs):
-        # iterating through the dict and checking the pairs (data_type, unit_name)
         if "metadata" in attrs:
-            for key in attrs["metadata"]:
-                if len(attrs["metadata"][key]) == 2:
-                    param_pair = attrs["metadata"][key]
-                    if param_pair[0] not in [def_type.value for def_type in self.DefinedTypes]:
-                        raise ValidationError(
-                            f"Key \'{key}\': Wrong format. Refer to project creation documentation.")
-                else:
-                    raise ValidationError(
-                        f"Field \'{key}\': Wrong format. Refer to project creation documentation.")
+            # run the metadata through the ArcSchema to check for a validation error
+            ArcSchema(fields=attrs["metadata"])
         return super().validate(attrs)
 
+    """
     def create(self, validated_data):
         if (
             ("project_name" in validated_data) and
@@ -101,32 +37,13 @@ class ProjectSerializer(serializers.ModelSerializer):
             raise ValidationError("Asset tags are not defined.")
 
         return super().create(validated_data)
+    """
 
     def update(self, instance, validated_data):
+        # Only allow updation of project name and addition of asset types
+
         if "project_name" in validated_data:
             setattr(instance, "project_name", validated_data["project_name"])
-
-        if "metadata" in validated_data:
-            old_params = instance.metadata
-            new_params = validated_data["metadata"]
-
-            for key in old_params:
-                if key not in new_params.keys():
-                    raise ValidationError("Parameters cannot be deleted.")
-
-            for key, value in new_params.items():
-                if key not in old_params:
-                    continue
-                new_value, old_value = self.DefinedTypes.from_str(
-                    value[0]), self.DefinedTypes.from_str(old_params[key][0])
-                try:
-                    if self.size_ordering(new_value, old_value) < 0:
-                        raise ValidationError(
-                            "Parameters can only be expanded, not shrunk.")
-                except TypeError:
-                    raise ValidationError(
-                        "Cannot convert number types to non-number types.")
-            setattr(instance, "metadata", validated_data["metadata"])
 
         if "assets" in validated_data:
             old_assets = instance.assets
@@ -156,38 +73,23 @@ class GeneratedModelSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = GeneratedModel
-        fields = "__all__"
+        fields = ["id", "parameters", "files"]
 
     def validate(self, attrs):
         project_instance = self.context["project"]
-        missing_parameters = []
-        mismatched_types = []
 
         new_attrs = {}
 
         if "parameters" in attrs:
-            new_attrs["parameters"] = {}
-            for param_name in project_instance.metadata:
-                if param_name not in attrs["parameters"]:
-                    missing_parameters.append(param_name)
-                    continue
-
-                param_type = project_instance.metadata[param_name][0]
-                param_val = attrs["parameters"][param_name]
-                if not ProjectSerializer.type_match(param_val, param_type):
-                    mismatched_types.append(param_name)
-                    continue
-
-                new_attrs['parameters'].update({param_name: param_val})
-
-            if len(missing_parameters) > 0:
-                raise ValidationError(
-                    f"The following parameters were missing: {missing_parameters}")
-
-            if len(mismatched_types) > 0:
-                raise ValidationError(
-                    f"The following parameters had mismatched types: {mismatched_types}. Refer to project schema."
-                )
+            # new_attrs["parameters"] = {}
+            schema = ArcSchema(fields=project_instance.metadata)
+            record = []
+            for field in schema.fields:
+                record.append(attrs["parameters"][field.field_name])
+            is_valid, errors = schema.validate_record(record)
+            if not is_valid:
+                raise ValidationError(errors)
+            new_attrs["parameters"] = record
 
         return super().validate(new_attrs)
 
