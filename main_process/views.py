@@ -1,18 +1,19 @@
 import django_otp
 from django.contrib.auth.models import User
 from django.db import transaction
-from rest_framework import permissions, status, views, viewsets, mixins
+from rest_framework import permissions, status, views, viewsets
 from rest_framework.authentication import (BasicAuthentication,
                                            SessionAuthentication,
                                            TokenAuthentication)
 from rest_framework.authtoken.models import Token
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
-from rest_framework.exceptions import ValidationError
 
-from main_process.models import GeneratedModel, Project, AssetFile
-from main_process.serializers import (GeneratedModelSerializer,
-                                      ProjectSerializer, AssetFileSerializer)
+from main_process.models import AssetFile, GeneratedModel, Project
+from main_process.serializers import (AssetFileSerializer,
+                                      GeneratedModelSerializer,
+                                      ProjectSerializer)
 
 
 class TokenLoginView(views.APIView):
@@ -25,7 +26,6 @@ class TokenLoginView(views.APIView):
             assert "username" in request.data
             assert "password" in request.data
             assert "token" in request.data
-            print(request.data)
 
             user = User.objects.get(username=request.data["username"])
             assert user.check_password(request.data["password"])
@@ -91,7 +91,6 @@ class GeneratedModelViewSet(viewsets.ModelViewSet):
         fileset = dict(map(lambda asset_file: (asset_file.tag, asset_file),
                        AssetFile.objects.filter(generated_model=generated_model)))
         taglist = set(project.assets)
-        print(fileset, taglist)
 
         files_were_uploaded = False
         if len(request.FILES) > 0:

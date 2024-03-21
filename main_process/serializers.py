@@ -1,8 +1,8 @@
-from main_process.models import Project, GeneratedModel, AssetFile
 from morpho_typing import ArcSchema
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from enum import Enum
+
+from main_process.models import AssetFile, GeneratedModel, Project
 
 
 class AssetFileSerializer(serializers.ModelSerializer):
@@ -21,23 +21,6 @@ class ProjectSerializer(serializers.ModelSerializer):
             # run the metadata through the ArcSchema to check for a validation error
             ArcSchema(fields=attrs["metadata"])
         return super().validate(attrs)
-
-    """
-    def create(self, validated_data):
-        if (
-            ("project_name" in validated_data) and
-            (validated_data["project_name"].__len__() == 0)
-        ):
-            raise ValidationError("Project name is empty.")
-
-        if (not "metadata" in validated_data):
-            raise ValidationError("Project parameters are not defined.")
-
-        if (not "assets" in validated_data):
-            raise ValidationError("Asset tags are not defined.")
-
-        return super().create(validated_data)
-    """
 
     def update(self, instance, validated_data):
         # Only allow updation of project name and addition of asset types
