@@ -73,8 +73,6 @@ class GeneratedModelViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
     def get_serializer(self, *args, **kwargs):
-        # list serializer support
-        # kwargs.update({"many": True})
         return super().get_serializer(*args, **kwargs)
 
     def get_serializer_context(self):
@@ -97,13 +95,16 @@ class GeneratedModelViewSet(viewsets.ModelViewSet):
 
         files_were_uploaded = False
         if len(request.FILES) > 0:
-            # File Creation Branch
+            # Performing file creation here
+
+            # checking manually if the asset class / tag exists within the project schema
             nonexisting_filetags = set(
                 filter(lambda filename: filename not in taglist, request.FILES.keys()))
             if len(nonexisting_filetags) > 0:
                 raise ValidationError(
                     f"The following tags do not exist: {nonexisting_filetags}")
 
+            # if all is well, upload all the files
             for filename, file in request.FILES.items():
                 if filename in fileset:
                     fileset[filename].delete()
@@ -113,6 +114,7 @@ class GeneratedModelViewSet(viewsets.ModelViewSet):
 
             files_were_uploaded = True
 
+        # Run inherited code
         serializer = self.get_serializer(
             generated_model, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
@@ -123,6 +125,7 @@ class GeneratedModelViewSet(viewsets.ModelViewSet):
             # forcibly invalidate the prefetch cache on the instance.
             generated_model._prefetched_objects_cache = {}
 
+        # nothing else to get updated here, so we do nothing with the serialized data
         response = {
             "model": serializer.data,
         }
@@ -144,6 +147,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         return super().update(request, *args, **kwargs)
 
     def destroy(self, request, *args, **kwargs):
+        # perform soft deletion by flipping the deleted status
         instance = self.get_object()
         instance.deleted = True
         instance.save()
