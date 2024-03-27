@@ -75,7 +75,8 @@ class GeneratedModelViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
     def get_serializer(self, *args, **kwargs):
-        kwargs['many'] = True
+        if self.request.method in ('PUT', 'PATCH') and isinstance(self.request.data, list):
+            kwargs['many'] = True
         return super().get_serializer(*args, **kwargs)
 
     def get_serializer_context(self):
@@ -92,7 +93,16 @@ class GeneratedModelViewSet(viewsets.ModelViewSet):
         models = request.data
         erroring_models = []
         succeeding_models = []
+        if isinstance(models, dict):
+            # perform regular, single-object creation
+            serializer = self.get_serializer(data=models)
+            serializer.is_valid(raise_exception=True)
+            self.perform_create(serializer)
+            headers = self.get_success_headers(serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
         for model in models:
+            # handle multiple-object creation
             serializer = GeneratedModelSerializer(
                 data=model, context=self.get_serializer_context())
             if not serializer.is_valid():
