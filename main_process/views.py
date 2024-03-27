@@ -1,6 +1,8 @@
 import django_otp
+import json
 from django.contrib.auth.models import User
 from django.db import transaction
+from morpho_typing import MorphoAssetCollection
 from rest_framework import permissions, status, views, viewsets
 from rest_framework.authentication import (BasicAuthentication,
                                            SessionAuthentication,
@@ -73,6 +75,7 @@ class GeneratedModelViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
     def get_serializer(self, *args, **kwargs):
+        kwargs['many'] = True
         return super().get_serializer(*args, **kwargs)
 
     def get_serializer_context(self):
@@ -85,12 +88,29 @@ class GeneratedModelViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return GeneratedModel.objects.filter(project_key=self.kwargs["project_pk"]).prefetch_related("files")
 
+    def create(self, request, *args, **kwargs):
+        models = request.data
+        erroring_models = []
+        succeeding_models = []
+        for model in models:
+            serializer = GeneratedModelSerializer(
+                data=model, context=self.get_serializer_context())
+            if not serializer.is_valid():
+                erroring_models.append(
+                    {"model": model, "errors": serializer.errors})
+            else:
+                succeeding_models.append(model)
+                self.perform_create(serializer)
+            headers = self.get_success_headers(serializer.data)
+        return Response({"models_created": len(succeeding_models), "failures": erroring_models, "successes": succeeding_models}, status=status.HTTP_200_OK, headers=headers)
+
     def update(self, request, *args, **kwargs):
         generated_model = self.get_object()
         project = Project.objects.get(project_id=self.kwargs["project_pk"])
         fileset = dict(map(lambda asset_file: (asset_file.tag, asset_file),
                        AssetFile.objects.filter(generated_model=generated_model)))
-        taglist = set(project.assets)
+        taglist = {asset.tag: asset for asset in MorphoAssetCollection(
+            assets=project.assets).assets}
 
         files_were_uploaded = False
         if len(request.FILES) > 0:
@@ -102,6 +122,8 @@ class GeneratedModelViewSet(viewsets.ModelViewSet):
             if len(nonexisting_filetags) > 0:
                 raise ValidationError(
                     f"The following tags do not exist: {nonexisting_filetags}")
+
+            # add file extension validation here later
 
             # if all is well, upload all the files
             for filename, file in request.FILES.items():
@@ -136,7 +158,7 @@ class GeneratedModelViewSet(viewsets.ModelViewSet):
 
 
 class ProjectViewSet(viewsets.ModelViewSet):
-    queryset = Project.objects.all()
+    queryset = Project.objects.filter(deleted=False)
     serializer_class = ProjectSerializer
     authentication_classes = [TokenAuthentication, SessionAuthentication]
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
