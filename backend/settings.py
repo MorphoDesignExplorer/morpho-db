@@ -47,6 +47,8 @@ INSTALLED_APPS = [
     'django_otp.plugins.otp_email',
     # django two factor application
     'two_factor',
+    # file storage
+    'storages',
 ]
 
 MIDDLEWARE = [
