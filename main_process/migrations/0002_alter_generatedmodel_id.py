@@ -10,6 +10,9 @@ class Migration(migrations.Migration):
         ('main_process', '0001_initial'),
     ]
 
+    # do nothing
+    operations = []
+    """
     operations = [
         migrations.AlterField(
             model_name='generatedmodel',
@@ -17,3 +20,4 @@ class Migration(migrations.Migration):
             field=models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False),
         ),
     ]
+    """
