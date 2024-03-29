@@ -20,7 +20,7 @@ numpy==1.26.4
 packaging==24.0
 phonenumberslite==8.13.31
 psycopg==3.1.18
-pyscopg-binary
+pyscopg-binary==3.1.18
 pydantic==2.6.4
 pydantic_core==2.16.3
 pypng==0.20220715.0
