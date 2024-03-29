@@ -62,10 +62,12 @@ CONN_MAX_AGE = 60
 USE_SPACES = os.getenv('USE_SPACES') == 'TRUE'
 
 if USE_SPACES:
-    # settings
+    # collect settings from environment file
     AWS_ACCESS_KEY_ID = os.environ['AWS_ACCESS_KEY_ID']
     AWS_SECRET_ACCESS_KEY = os.environ['AWS_SECRET_ACCESS_KEY']
     AWS_STORAGE_BUCKET_NAME = os.environ['AWS_STORAGE_BUCKET_NAME']
+    # Don't include expiration and access key details in uploaded file URL
+    AWS_QUERYSTRING_AUTH = False
     AWS_DEFAULT_ACL = 'public-read'
     AWS_S3_ENDPOINT_URL = 'https://morpho-images.nyc3.digitaloceanspaces.com'
     AWS_S3_OBJECT_PARAMETERS = {'CacheControl': 'max-age=86400'}
