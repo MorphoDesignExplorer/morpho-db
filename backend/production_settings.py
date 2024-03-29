@@ -34,7 +34,7 @@ CSRF_COOKIE_SECURE = True
 
 SESSION_COOKIE_SECURE = True
 
-SECURE_SSL_REDIRECT = True
+# SECURE_SSL_REDIRECT = True
 
 # Application definition
 WSGI_APPLICATION = 'backend.wsgi.application'
