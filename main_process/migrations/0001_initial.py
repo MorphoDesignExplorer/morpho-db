@@ -16,10 +16,16 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Project',
             fields=[
-                ('project_id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('creation_date', models.DateTimeField(auto_now=True, help_text='Date of Creation')),
-                ('project_name', models.CharField(help_text='Project Name', max_length=256)),
-                ('metadata', models.JSONField(help_text='Set of Parameters and their units')),
+                ('project_id', models.UUIDField(default=uuid.uuid4,
+                 editable=False, primary_key=True, serialize=False)),
+                ('creation_date', models.DateTimeField(
+                    auto_now=True, help_text='Date of Creation')),
+                ('project_name', models.CharField(
+                    help_text='Project Name', max_length=256)),
+                ('variable_metadata', models.JSONField(
+                    help_text="Set of variable parameters and their units", blank=False)),
+                ('output_metadata', models.JSONField(
+                    help_text="Set of variable parameters and their units", blank=False)),
                 ('deleted', models.BooleanField(default=False)),
             ],
             options={
@@ -29,10 +35,14 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='GeneratedModel',
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('parameters', models.JSONField(help_text='Set of Parameters and their Values')),
-                ('assets', models.JSONField(help_text='Set of Asset Types and their URLs')),
-                ('project_key', models.ForeignKey(help_text='Foreign Key to Associated Model', on_delete=django.db.models.deletion.PROTECT, to='main_process.project')),
+                ('id', models.UUIDField(default=uuid.uuid4,
+                 editable=False, primary_key=True, serialize=False)),
+                ('parameters', models.JSONField(
+                    help_text='Set of Parameters and their Values')),
+                ('assets', models.JSONField(
+                    help_text='Set of Asset Types and their URLs')),
+                ('project_key', models.ForeignKey(help_text='Foreign Key to Associated Model',
+                 on_delete=django.db.models.deletion.PROTECT, to='main_process.project')),
             ],
         ),
     ]

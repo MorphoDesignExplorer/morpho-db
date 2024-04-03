@@ -80,13 +80,13 @@ class GeneratedModelViewSet(viewsets.ModelViewSet):
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        project = Project.objects.get(project_id=self.kwargs["project_pk"])
+        project = Project.objects.get(project_name=self.kwargs["project_pk"])
         context.update(
             {"project": project})
         return context
 
     def get_queryset(self):
-        return GeneratedModel.objects.filter(project_key=self.kwargs["project_pk"]).prefetch_related("files")
+        return GeneratedModel.objects.filter(project=self.kwargs["project_pk"]).prefetch_related("files")
 
     def create(self, request, *args, **kwargs):
         models = request.data

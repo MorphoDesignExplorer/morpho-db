@@ -26,14 +26,15 @@ class Project(models.Model):
     class Meta:
         db_table = "project"
 
-    project_id = models.UUIDField(
-        primary_key=True, default=uuid4, editable=False)
     creation_date = models.DateTimeField(
         auto_now=True, help_text="Date of Creation", editable=False)
     project_name = models.CharField(
-        max_length=256, blank=False, help_text="Project Name")
+        max_length=256, blank=False, help_text="Project Name", primary_key=True, db_column="project_name")
     # parameters and their units
-    metadata = models.JSONField(help_text="Set of Parameters and their units")
+    variable_metadata = models.JSONField(
+        help_text="Set of variable parameters and their units", blank=False)
+    output_metadata = models.JSONField(
+        help_text="Set of output parameters and their units", blank=False)
     assets = models.JSONField(
         help_text="Set of asset names", blank=False)
     deleted = models.BooleanField(default=False, blank=False)
@@ -48,14 +49,17 @@ class GeneratedModel(models.Model):
         db_table = "generated_model"
         indexes = [GinIndex(fields=['parameters'])]
 
-    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    id = models.BigAutoField(primary_key=True, editable=False)
     parameters = models.JSONField(
-        help_text="Set of Parameters and their Values", unique=True)
-    project_key = models.ForeignKey(
-        Project, on_delete=models.PROTECT, help_text="Foreign Key to Associated Project", blank=False)
+        help_text="set of variable parameters and their values", unique=True)
+    output_parameters = models.JSONField(
+        help_text="set of output parameters and their values", blank=True, null=True
+    )
+    project = models.ForeignKey(
+        Project, to_field="project_name", on_delete=models.PROTECT, help_text="Foreign Key to Associated Project", blank=False)
 
     def __str__(self) -> str:
-        return str(self.parameters) + ' -> ' + str(self.project_key)
+        return str(self.parameters | self.output_parameters) + ' -> ' + str(self.project)
 
 
 class AssetFile(models.Model):

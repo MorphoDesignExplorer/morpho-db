@@ -17,19 +17,19 @@ class ProjectSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
     def validate(self, attrs):
-        if "metadata" in attrs:
+        assert "project_name" in attrs
+        if "variable_metadata" in attrs:
             # run the metadata through MorphoProjectSchema to check for a validation error
-            MorphoProjectSchema(fields=attrs["metadata"])
+            MorphoProjectSchema(fields=attrs["variable_metadata"])
+        if "output_metadata" in attrs:
+            MorphoProjectSchema(fields=attrs["output_metadata"])
         if "assets" in attrs:
             # run the asset definition through MorphoAssetCollection to check for a validation error
             MorphoAssetCollection(assets=attrs["assets"])
         return super().validate(attrs)
 
     def update(self, instance, validated_data):
-        # Only allow updation of project name and addition of asset types
-
-        if "project_name" in validated_data:
-            setattr(instance, "project_name", validated_data["project_name"])
+        # Only allow addition of asset types
 
         if "assets" in validated_data:
             old_assets = MorphoAssetCollection(assets=instance.assets)
@@ -62,7 +62,7 @@ class GeneratedModelSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = GeneratedModel
-        fields = ["id", "parameters", "files"]
+        fields = ["id", "parameters", "output_parameters", "files"]
 
     def validate(self, attrs):
         project_instance = self.context["project"]
@@ -70,7 +70,8 @@ class GeneratedModelSerializer(serializers.ModelSerializer):
         new_attrs = {}
 
         if "parameters" in attrs:
-            schema = MorphoProjectSchema(fields=project_instance.metadata)
+            schema = MorphoProjectSchema(
+                fields=project_instance.variable_metadata)
 
             # arrange the record parameters according to the schema's order
             record, params = [], {}
@@ -82,6 +83,19 @@ class GeneratedModelSerializer(serializers.ModelSerializer):
                 raise ValidationError(errors)
             new_attrs["parameters"] = params
 
+        if "output_parameters" in attrs:
+            schema = MorphoProjectSchema(
+                fields=project_instance.output_metadata)
+            # arrange the record parameters according to the schema's order
+            record, params = [], {}
+            for field in schema.fields:
+                record.append(attrs["output_parameters"][field.field_name])
+                params[field.field_name] = attrs["output_parameters"][field.field_name]
+            is_valid, errors = schema.validate_record(record)
+            if not is_valid:
+                raise ValidationError(errors)
+            new_attrs["output_parameters"] = params
+
         return super().validate(new_attrs)
 
     def create(self, validated_data):
@@ -90,6 +104,6 @@ class GeneratedModelSerializer(serializers.ModelSerializer):
         if "parameters" not in validated_data:
             raise ValidationError("parameters are required.")
 
-        validated_data["project_key"] = project_instance
+        validated_data["project"] = project_instance
 
         return super().create(validated_data)
