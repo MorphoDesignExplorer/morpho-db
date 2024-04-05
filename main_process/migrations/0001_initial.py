@@ -35,8 +35,8 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='GeneratedModel',
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4,
-                 editable=False, primary_key=True, serialize=False)),
+                ('id', models.BigAutoField(
+                    editable=False, primary_key=True, serialize=False)),
                 ('parameters', models.JSONField(
                     help_text='Set of Parameters and their Values')),
                 ('assets', models.JSONField(

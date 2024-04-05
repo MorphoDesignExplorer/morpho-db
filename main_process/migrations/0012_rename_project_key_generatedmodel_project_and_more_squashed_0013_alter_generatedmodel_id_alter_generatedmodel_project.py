@@ -28,12 +28,6 @@ class Migration(migrations.Migration):
         ),
         migrations.AlterField(
             model_name='generatedmodel',
-            name='id',
-            field=models.BigAutoField(
-                editable=False, primary_key=True, serialize=False),
-        ),
-        migrations.AlterField(
-            model_name='generatedmodel',
             name='project',
             field=models.ForeignKey(help_text='Foreign Key to Associated Project',
                                     on_delete=django.db.models.deletion.PROTECT, to='main_process.project'),
