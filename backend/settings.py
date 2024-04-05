@@ -141,7 +141,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Django 2FA Settings
 TWO_FACTOR_PATCH_ADMIN = False
 LOGIN_URL = 'two_factor:login'
-LOGIN_REDIRECT_URL = '/admin'
+LOGIN_REDIRECT_URL = 'two_factor:setup'
 TWO_FACTOR_REMEMBER_COOKIE_AGE = 60 * 60 * \
     24 * 7   # Remember user session for 7 days
 
