@@ -115,7 +115,7 @@ class GeneratedModelViewSet(viewsets.ModelViewSet):
 
     def update(self, request, *args, **kwargs):
         generated_model = self.get_object()
-        project = Project.objects.get(project_id=self.kwargs["project_pk"])
+        project = Project.objects.get(project_name=self.kwargs["project_pk"])
         fileset = dict(map(lambda asset_file: (asset_file.tag, asset_file),
                        AssetFile.objects.filter(generated_model=generated_model)))
         taglist = {asset.tag: asset for asset in MorphoAssetCollection(
