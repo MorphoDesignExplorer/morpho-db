@@ -79,7 +79,8 @@ class GeneratedModelSerializer(serializers.ModelSerializer):
                 record.append(attrs["parameters"][field.field_name])
                 params[field.field_name] = attrs["parameters"][field.field_name]
             is_valid, errors = schema.validate_record(record)
-            if not is_valid:
+            # allow force insertion of documents during migration; TO BE PATCHED LATER
+            if not is_valid and 'Force' not in self.context["request"].headers:
                 raise ValidationError(errors)
             new_attrs["parameters"] = params
 
