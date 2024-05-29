@@ -25,8 +25,9 @@ SECRET_KEY = os.environ['SECRET_KEY']
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ["*"]
+FORCE_SCRIPT_NAME = os.environ['FORCE_SCRIPT_NAME']
 
+ALLOWED_HOSTS = ["*"]
 
 # Security
 
@@ -55,6 +56,18 @@ DATABASES = {
 
 CONN_MAX_AGE = 60
 
+# Redis Caching
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": "redis://redis:6379",
+    }
+}
+
+INSTALLED_APPS += [
+    'cachalot'
+]
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/

@@ -14,7 +14,7 @@ from rest_framework.throttling import AnonRateThrottle
 from main_process.models import AssetFile, GeneratedModel, Project
 from main_process.serializers import (AssetFileSerializer,
                                       GeneratedModelSerializer,
-                                      ProjectSerializer)
+                                      ProjectSerializer, GeneratedModelReadOnlySerializer)
 
 
 class TokenLoginView(views.APIView):
@@ -76,6 +76,8 @@ class GeneratedModelViewSet(viewsets.ModelViewSet):
     def get_serializer(self, *args, **kwargs):
         if self.request.method in ('PUT', 'PATCH') and isinstance(self.request.data, list):
             kwargs['many'] = True
+        elif self.request.method == 'GET':
+            return GeneratedModelReadOnlySerializer(*args, **kwargs)
         return super().get_serializer(*args, **kwargs)
 
     def get_serializer_context(self):

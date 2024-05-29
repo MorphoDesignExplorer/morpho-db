@@ -1,6 +1,7 @@
 from morpho_typing import MorphoAssetCollection, MorphoProjectSchema
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+import serpy
 
 from main_process.models import AssetFile, GeneratedModel, Project
 
@@ -9,6 +10,19 @@ class AssetFileSerializer(serializers.ModelSerializer):
     class Meta:
         model = AssetFile
         fields = "__all__"
+
+
+class AssetFileReadOnlySerializer(serpy.Serializer):
+    id = serpy.StrField()
+    file = serpy.MethodField()
+    tag = serpy.StrField()
+    generated_model = serpy.MethodField()
+
+    def get_file(self, instance):
+        return instance.file.storage.url(instance.file.name)
+
+    def get_generated_model(self, instance):
+        return instance.generated_model.id
 
 
 class ProjectSerializer(serializers.ModelSerializer):
@@ -52,6 +66,16 @@ class ProjectSerializer(serializers.ModelSerializer):
         instance.save()
 
         return instance
+
+
+class GeneratedModelReadOnlySerializer(serpy.Serializer):
+    id = serpy.IntField()
+    parameters = serpy.Field(attr="parameters")
+    output_parameters = serpy.Field(attr="output_parameters")
+    files = serpy.MethodField()
+
+    def get_files(self, instance):
+        return [AssetFileReadOnlySerializer(file).data for file in instance.files.all()]
 
 
 class GeneratedModelSerializer(serializers.ModelSerializer):
