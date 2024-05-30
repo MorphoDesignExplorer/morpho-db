@@ -54,7 +54,7 @@ DATABASES = {
     }
 }
 
-CONN_MAX_AGE = 60
+CONN_MAX_AGE = None
 
 # Redis Caching
 
@@ -90,7 +90,7 @@ if USE_SPACES:
     STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
     # media settings
     PUBLIC_MEDIA_LOCATION = 'media'
-    MEDIA_URL = f'https://{AWS_S3_ENDPOINT_URL}/{PUBLIC_MEDIA_LOCATION}/'
+    MEDIA_URL = f'{AWS_S3_ENDPOINT_URL}/{AWS_STORAGE_BUCKET_NAME}/{PUBLIC_MEDIA_LOCATION}/'
     DEFAULT_FILE_STORAGE = 'backend.storage_backends.PublicMediaStorage'
 else:
     STATIC_URL = '/static/'
@@ -99,3 +99,7 @@ else:
     MEDIA_ROOT = BASE_DIR / 'media'
 
 STATICFILES_DIRS = (BASE_DIR / 'static',)
+
+# Sessions must use cache as a storage backend.
+
+SESSION_ENGINE = "django.contrib.sessions.backends.cache"

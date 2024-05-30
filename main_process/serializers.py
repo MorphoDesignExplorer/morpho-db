@@ -20,13 +20,7 @@ class AssetFileReadOnlySerializer(serpy.Serializer):
     generated_model = serpy.MethodField()
 
     def get_file(self, instance):
-        value = cache.get(instance.file.name)
-        if value is None:
-            # Cache for 10 days
-            cache.add(instance.file.name, instance.file.url, 60 * 60 * 24 * 10)
-            value = cache.get(instance.file.name)
-        return value
-        return instance.file.storage.url(instance.file.name)
+        return instance.file.storage.get_prefix() + instance.file.name
 
     def get_generated_model(self, instance):
         return instance.generated_model.id
