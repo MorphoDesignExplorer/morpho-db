@@ -71,6 +71,7 @@ class ProjectSerializer(serializers.ModelSerializer):
 
 class GeneratedModelReadOnlySerializer(serpy.Serializer):
     id = serpy.IntField()
+    scoped_id = serpy.IntField()
     parameters = serpy.Field(attr="parameters")
     output_parameters = serpy.Field(attr="output_parameters")
     files = serpy.MethodField()
@@ -87,7 +88,7 @@ class GeneratedModelSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = GeneratedModel
-        fields = ["id", "parameters", "output_parameters", "files"]
+        fields = ["id", "scoped_id", "parameters", "output_parameters", "files"]
 
     def validate(self, attrs):
         project_instance = self.context["project"]

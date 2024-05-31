@@ -1,6 +1,7 @@
 import django_otp
 from django.contrib.auth.models import User
 from django.db import transaction
+from django.db.models import Max
 from morpho_typing import MorphoAssetCollection
 from rest_framework import permissions, status, views, viewsets
 from rest_framework.authentication import (BasicAuthentication,
@@ -88,14 +89,20 @@ class GeneratedModelViewSet(viewsets.ModelViewSet):
         return context
 
     def get_queryset(self):
-        return GeneratedModel.objects.filter(project=self.kwargs["project_pk"]).prefetch_related("files")
+        return GeneratedModel.objects.filter(project=self.kwargs["project_pk"]).prefetch_related("files").order_by("scoped_id")
 
+    @transaction.atomic
     def create(self, request, *args, **kwargs):
         models = request.data
         erroring_models = []
         succeeding_models = []
         if isinstance(models, dict):
             # perform regular, single-object creation
+            scoped_id = 0
+            scoped_id_set = GeneratedModel.objects.select_for_update().filter(project_id=self.get_serializer_context()["project"].project_name)
+            if scoped_id_set.exists():
+                scoped_id = 1 + scoped_id_set.aggregate(Max('scoped_id'))["scoped_id__max"]
+                models["scoped_id"] = scoped_id
             serializer = self.get_serializer(data=models)
             serializer.is_valid(raise_exception=True)
             self.perform_create(serializer)
@@ -104,6 +111,7 @@ class GeneratedModelViewSet(viewsets.ModelViewSet):
 
         for model in models:
             # handle multiple-object creation
+            raise NotImplementedError("bulk model creation is not supported.")
             serializer = GeneratedModelSerializer(
                 data=model, context=self.get_serializer_context())
             if not serializer.is_valid():

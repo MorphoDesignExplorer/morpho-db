@@ -50,6 +50,7 @@ class GeneratedModel(models.Model):
         indexes = [GinIndex(fields=['parameters'])]
 
     id = models.BigAutoField(primary_key=True, editable=False)
+    scoped_id = models.IntegerField(blank=False)
     parameters = models.JSONField(
         help_text="set of variable parameters and their values", unique=True)
     output_parameters = models.JSONField(
