@@ -3,8 +3,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 import serpy
 
-from main_process.models import AssetFile, GeneratedModel, Project
-from django.core.cache import cache
+from main_process.models import AssetFile, GeneratedModel, Project, ProjectMetadata, MarkdownDocument
 
 
 class AssetFileSerializer(serializers.ModelSerializer):
@@ -30,6 +29,10 @@ class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = Project
         fields = "__all__"
+    metadata = serializers.SerializerMethodField()
+
+    def get_metadata(self, instance):
+        return ProjectMetadataSerializer(ProjectMetadata.objects.get(project=instance)).data
 
     def validate(self, attrs):
         assert "project_name" in attrs
@@ -133,3 +136,29 @@ class GeneratedModelSerializer(serializers.ModelSerializer):
         validated_data["project"] = project_instance
 
         return super().create(validated_data)
+
+class ProjectMetadataSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProjectMetadata
+        fields = ["captions", "description"]
+
+    def validate(self, attrs):
+        project: Project = self.context["project"]
+        attrs = super().validate(attrs)
+        all_tagnames = set([obj["field_name"] for obj in project.variable_metadata + project.output_metadata])
+        if type(attrs["captions"]) != list:
+            raise ValidationError("Captions must be a list of form {'tag_name': string, 'display_name': string}.")
+        for caption in attrs["captions"]:
+            tag_name, display_name = caption["tag_name"], caption["display_name"]
+            if tag_name not in all_tagnames:
+                raise ValidationError(f"parameter name '{tag_name}' does not match any parameter names.")
+            if len(display_name) == 0:
+                raise ValidationError(f"Display name for parameter '{tag_name}' cannot be empty.")
+        attrs["project"] = project
+        return attrs
+
+
+class MarkdownDocumentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MarkdownDocument
+        fields = ["text"]

@@ -9,5 +9,4 @@ ENV VIRTUAL_ENV /env
 ENV PATH /env/bin:$PATH
 ENV DJANGO_SETTINGS_MODULE backend.production_settings
 EXPOSE 8000
-CMD ["gunicorn", "--bind", ":8000", "--workers", "3", "backend.wsgi"]
-
+CMD ["gunicorn", "--reload", "--bind", ":8000", "--access-logfile", "-", "--error-logfile", "-", "--workers", "3", "backend.wsgi"]

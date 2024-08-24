@@ -1,11 +1,12 @@
 from django.urls import include, path
-# from rest_framework import routers
+from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from rest_framework_nested import routers
 
 from main_process import views
 
 router = routers.SimpleRouter()
 router.register(r'project', views.ProjectViewSet)
+router.register(r'document', views.MarkdownDocumentViewSet)
 
 project_router = routers.NestedSimpleRouter(
     router, r'project', lookup="project")
@@ -17,14 +18,24 @@ generated_model_router = routers.NestedSimpleRouter(
 generated_model_router.register(
     r'files', views.AssetFileViewSet, basename="model-files")
 
+metadata_urlpatterns = [
+    path('project/<str:pk>/metadata/', views.ProjectMetadataView.as_view()),
+]
+
 # Wire up our API using automatic URL routing.
 # Additionally, we include login URLs for the browsable API.
 urlpatterns = [
     path('', include(router.urls)),
     path('', include(project_router.urls)),
+    *metadata_urlpatterns,
     path('', include(generated_model_router.urls)),
-    path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
-    path('token_login/', views.TokenLoginView.as_view())
+]
+
+urlpatterns += [
+    path('schema/', SpectacularAPIView.as_view(), name='schema'),
+    # Optional UI:
+    path('schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
 ]
 
 urlpatterns += router.urls

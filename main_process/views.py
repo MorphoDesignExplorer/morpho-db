@@ -1,63 +1,21 @@
-import django_otp
+from authorization.utils import JWTAuthentication
 from django.contrib.auth.models import User
 from django.db import transaction
-from django.db.models import Max
+from django.db.models import Max 
 from morpho_typing import MorphoAssetCollection
-from rest_framework import permissions, status, views, viewsets
-from rest_framework.authentication import (BasicAuthentication,
-                                           SessionAuthentication,
-                                           TokenAuthentication)
-from rest_framework.authtoken.models import Token
-from rest_framework.exceptions import ValidationError
+import pydantic
+from rest_framework import permissions, status, views, viewsets, views
+from rest_framework.authentication import (SessionAuthentication)
+from rest_framework.exceptions import ValidationError, APIException
+from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework.throttling import AnonRateThrottle
 
-from main_process.models import AssetFile, GeneratedModel, Project
+from main_process.models import AssetFile, GeneratedModel, Project, ProjectMetadata, MarkdownDocument, Caption
 from main_process.serializers import (AssetFileSerializer,
                                       GeneratedModelSerializer,
-                                      ProjectSerializer, GeneratedModelReadOnlySerializer)
+                                      ProjectSerializer, GeneratedModelReadOnlySerializer, MarkdownDocumentSerializer)
+from typing import Literal, Union, List
 
-
-class TokenLoginView(views.APIView):
-    authentication_classes = [TokenAuthentication,
-                              SessionAuthentication, BasicAuthentication]
-    throttle_classes = [AnonRateThrottle]
-
-    def post(self, request, *args, **kwargs):
-        try:
-            assert "username" in request.data
-            assert "password" in request.data
-            assert "token" in request.data
-
-            user = User.objects.get(username=request.data["username"])
-            assert user.check_password(request.data["password"])
-            request.user = user
-
-            # at this point, user is authenticated.
-
-            if not django_otp.user_has_device(user=user, confirmed=True):
-                return Response({"detail", "User has no valid authentication devices."}, status=status.HTTP_400_BAD_REQUEST)
-
-            # get auth devices for the user
-            with transaction.atomic():
-                device_list = django_otp.devices_for_user(
-                    user=user, confirmed=True, for_verify=True)
-
-                # verify token against each device
-                for device in device_list:
-                    try:
-                        device_or_none = django_otp.verify_token(
-                            user=user, device_id=device.persistent_id, token=request.data["token"])
-                        if device_or_none is not None:
-                            token, _ = Token.objects.get_or_create(user=user)
-                            return Response({"token": token.key}, status=status.HTTP_200_OK)
-                    except:
-                        return Response({"detail": "A problem happened during OTP verification."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-                return Response({"detail": "Invalid OTP. Wait for a few seconds and re-enter a new OTP."}, status=status.HTTP_400_BAD_REQUEST)
-
-        except AssertionError:
-            return Response({"detail": "Invalid login attempt."}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class AssetFileViewSet(viewsets.ReadOnlyModelViewSet):
@@ -71,7 +29,7 @@ class AssetFileViewSet(viewsets.ReadOnlyModelViewSet):
 class GeneratedModelViewSet(viewsets.ModelViewSet):
     queryset = GeneratedModel.objects.all()
     serializer_class = GeneratedModelSerializer
-    authentication_classes = [TokenAuthentication, SessionAuthentication]
+    authentication_classes = [JWTAuthentication, SessionAuthentication]
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
     def get_serializer(self, *args, **kwargs):
@@ -98,7 +56,7 @@ class GeneratedModelViewSet(viewsets.ModelViewSet):
         succeeding_models = []
         if isinstance(models, dict):
             # perform regular, single-object creation
-            scoped_id = 0
+            scoped_id = 0 # this WILL break. Please fetch the latest scoped_id and THEN add the models.
             scoped_id_set = GeneratedModel.objects.select_for_update().filter(project_id=self.get_serializer_context()["project"].project_name)
             if scoped_id_set.exists():
                 scoped_id = 1 + scoped_id_set.aggregate(Max('scoped_id'))["scoped_id__max"]
@@ -109,9 +67,9 @@ class GeneratedModelViewSet(viewsets.ModelViewSet):
             headers = self.get_success_headers(serializer.data)
             return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
+        raise NotImplementedError("bulk model creation is not supported.")
         for model in models:
             # handle multiple-object creation
-            raise NotImplementedError("bulk model creation is not supported.")
             serializer = GeneratedModelSerializer(
                 data=model, context=self.get_serializer_context())
             if not serializer.is_valid():
@@ -179,7 +137,7 @@ class GeneratedModelViewSet(viewsets.ModelViewSet):
 class ProjectViewSet(viewsets.ModelViewSet):
     queryset = Project.objects.filter(deleted=False)
     serializer_class = ProjectSerializer
-    authentication_classes = [TokenAuthentication, SessionAuthentication]
+    authentication_classes = [SessionAuthentication, JWTAuthentication]
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
     def update(self, request, *args, **kwargs):
@@ -192,3 +150,58 @@ class ProjectViewSet(viewsets.ModelViewSet):
         instance.deleted = True
         instance.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class MarkdownDocumentViewSet(viewsets.ModelViewSet):
+    queryset = MarkdownDocument.objects.all()
+    serializer_class = MarkdownDocumentSerializer
+    authentication_classes = [SessionAuthentication, JWTAuthentication]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+
+class MetadataRequest(pydantic.BaseModel):
+    field: Literal["captions", "human_name", "description"]
+    new_content: str | List[Caption]
+
+
+class ProjectMetadataView(views.APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def get_instance(self) -> ProjectMetadata | None:
+        try:
+            model = ProjectMetadata.objects.get(project__project_name=self.kwargs.get("pk"))
+            return model
+        except:
+            return None
+
+    def get(self, request: Request, *args, **kwargs):
+        instance = self.get_instance()
+        if instance is not None:
+            metadata = ProjectMetadata.Metadata.model_validate(instance)
+            return Response(metadata.model_dump())
+        else:
+            raise APIException("Resource not found.")
+
+    def put(self, request: Request, *args, **kwargs):
+        try:
+            metadata = MetadataRequest.model_validate(request.data)
+            instance = self.get_instance()
+            print(metadata)
+            match metadata.field:
+                case "captions":
+                    instance.captions = [caption.model_dump() for caption in metadata.new_content]
+                    instance.save()
+                case "description":
+                    instance.description.text = metadata.new_content
+                    instance.description.save()
+                case "human_name":
+                    instance.human_name = metadata.new_content
+                    instance.save()
+            response = ProjectMetadata.Metadata.model_validate(self.get_instance())
+            return Response(
+                response.model_dump()
+            )
+        except pydantic.ValidationError as ve:
+            return Response(ve.errors())
+

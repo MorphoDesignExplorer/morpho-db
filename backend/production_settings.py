@@ -25,9 +25,12 @@ SECRET_KEY = os.environ['SECRET_KEY']
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
+if "DEBUG" in os.environ and os.environ["DEBUG"]:
+    DEBUG = True
+
 FORCE_SCRIPT_NAME = os.environ['FORCE_SCRIPT_NAME']
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = ["localhost", "localhost:8000", "backend"]
 
 # Security
 

@@ -40,15 +40,13 @@ INSTALLED_APPS = [
     'main_process',                     # Main Application
     'rest_framework',                   # Rest Framework
     'rest_framework.authtoken',         # Token Authentication
-    # django_otp applications
-    'django_otp',
-    'django_otp.plugins.otp_static',
-    'django_otp.plugins.otp_totp',
-    'django_otp.plugins.otp_email',
-    # django two factor application
-    'two_factor',
     # file storage
     'storages',
+    # API Schema
+    'drf_spectacular',
+    'drf_spectacular_sidecar',
+    # Homebrew auth
+    'authorization',
 ]
 
 MIDDLEWARE = [
@@ -167,16 +165,7 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.BasicAuthentication',
         'rest_framework.authentication.SessionAuthentication',
         'rest_framework.authentication.TokenAuthentication',
-    ]
-}
-
-REST_FRAMEWORK = {
-    'DEFAULT_THROTTLE_CLASSES': [
-        'rest_framework.throttling.AnonRateThrottle',
-        'rest_framework.throttling.UserRateThrottle'
     ],
-    'DEFAULT_THROTTLE_RATES': {
-        'anon': '100/day',
-        'user': '1000/day'
-    }
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'EXCEPTION_HANDLER': 'backend.exception_handler.exception_with_code_handler'
 }
