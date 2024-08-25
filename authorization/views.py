@@ -79,7 +79,7 @@ class AuthVerifyView(APIView):
             token_string = get_authorization_header(request).decode().split()[1]
             token = Token.model_validate(jwt.decode(token_string, settings.SECRET_KEY, ["HS256"], options={"require": ["exp", "iat"]}))
         except Exception as e:
-            raise APIException("Invalid Authorization Token." + repr(e) + token_string)
+            raise APIException("Invalid Authorization Token.")
 
 
         try:
