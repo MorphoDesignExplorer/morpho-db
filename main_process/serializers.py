@@ -29,7 +29,8 @@ class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = Project
         fields = "__all__"
-    metadata = serializers.SerializerMethodField()
+
+    metadata = serializers.SerializerMethodField(read_only=True)
 
     def get_metadata(self, instance):
         return ProjectMetadataSerializer(ProjectMetadata.objects.get(project=instance)).data
@@ -140,7 +141,7 @@ class GeneratedModelSerializer(serializers.ModelSerializer):
 class ProjectMetadataSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProjectMetadata
-        fields = ["captions", "description"]
+        fields = ["captions", "description", "human_name"]
 
     def validate(self, attrs):
         project: Project = self.context["project"]
