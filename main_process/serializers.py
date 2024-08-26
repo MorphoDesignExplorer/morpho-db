@@ -1,7 +1,8 @@
-from morpho_typing import MorphoAssetCollection, MorphoProjectSchema
+from morpho_typing import MorphoAssetCollection, MorphoProjectSchema, MorphoProjectField
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 import serpy
+from typing import Dict
 
 from main_process.models import AssetFile, GeneratedModel, Project, ProjectMetadata, MarkdownDocument
 
@@ -48,7 +49,49 @@ class ProjectSerializer(serializers.ModelSerializer):
         return super().validate(attrs)
 
     def update(self, instance, validated_data):
-        # Only allow addition of asset types
+        # allow addition of assets
+        # + modification of certain fields within metadata
+
+        if "variable_metadata" in validated_data:
+            # compare new metadata fields to old metadata fields. these must be in two different dictionaries.
+            # if the old data matches the new data, assign 'unit' and 'range' from new metadata into old.
+            # Update instance with the updated metadata model
+            old_data = MorphoProjectSchema(fields=instance.variable_metadata)
+            old_fields: Dict[str, MorphoProjectField] = {}
+            new_fields: Dict[str, MorphoProjectField] = {}
+            for field in validated_data["variable_metadata"]:
+                field_model = MorphoProjectField.model_validate(field)
+                new_fields[field_model.field_name] = field_model
+            for field in old_data.fields:
+                old_fields[field.field_name] = field
+
+            for field_name in old_fields.keys():
+                if field_name in new_fields.keys():
+                    old_fields[field_name].field_unit = new_fields[field_name].field_unit
+                    old_fields[field_name].field_range = new_fields[field_name].field_range
+
+            variable_metadata = [old_fields[field_name].model_dump() for field_name in old_fields.keys()]
+            
+            setattr(instance, "variable_metadata", variable_metadata)
+
+        if "output_metadata" in validated_data:
+            old_data = MorphoProjectSchema(fields=instance.output_metadata)
+            old_fields: Dict[str, MorphoProjectField] = {}
+            new_fields: Dict[str, MorphoProjectField] = {}
+            for field in validated_data["output_metadata"]:
+                field_model = MorphoProjectField.model_validate(field)
+                new_fields[field_model.field_name] = field_model
+            for field in old_data.fields:
+                old_fields[field.field_name] = field
+
+            for field_name in old_fields.keys():
+                if field_name in new_fields.keys():
+                    old_fields[field_name].field_unit = new_fields[field_name].field_unit
+                    old_fields[field_name].field_range = new_fields[field_name].field_range
+
+            output_metadata = [old_fields[field_name].model_dump() for field_name in old_fields.keys()]
+            
+            setattr(instance, "output_metadata", output_metadata)
 
         if "assets" in validated_data:
             old_assets = MorphoAssetCollection(assets=instance.assets)
