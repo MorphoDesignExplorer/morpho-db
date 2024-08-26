@@ -169,6 +169,9 @@ class GeneratedModelSerializer(serializers.ModelSerializer):
                 raise ValidationError(errors)
             new_attrs["output_parameters"] = params
 
+        if "scoped_id" in attrs:
+            new_attrs["scoped_id"] = attrs["scoped_id"]
+
         return super().validate(new_attrs)
 
     def create(self, validated_data):
