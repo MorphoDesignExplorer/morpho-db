@@ -146,16 +146,32 @@ TWO_FACTOR_REMEMBER_COOKIE_AGE = 60 * 60 * \
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+    "formatters": {
+        "verbose": {
+            "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
+            "style": "{",
+        },
+        "simple": {
+            "format": "{levelname} {message}",
+            "style": "{",
+        },
+    },
     'handlers': {
+        "file": {
+            "level": "INFO",
+            "class": "logging.FileHandler",
+            "filename": "deployment.log",
+            "formatter": "verbose"
+        },
         'console': {
             'level': 'DEBUG',
             'class': 'logging.StreamHandler',
         },
     },
     'loggers': {
-        'two_factor': {
-            'handlers': ['console'],
-            'level': 'INFO',
+        "": {
+            "handlers": ["file", "console"],
+            "level": "ERROR",
         }
     }
 }
