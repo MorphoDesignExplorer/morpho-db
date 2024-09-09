@@ -38,7 +38,7 @@ class Project(models.Model):
     class Meta:
         db_table = "project"
 
-    creation_date = models.DateTimeField(auto_now=True, help_text="Date of Creation", editable=False)
+    creation_date = models.DateTimeField(auto_now=True, help_text="Date of Creation", editable=True)
     project_name = models.CharField(max_length=256, blank=False, help_text="Project Name", primary_key=True)
     variable_metadata = models.JSONField(help_text="Set of variable parameters and their units", blank=False)
     output_metadata = models.JSONField(help_text="Set of output parameters and their units", blank=False)
